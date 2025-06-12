@@ -23,10 +23,41 @@ func main() {
 	urlFlag := flag.String("url", "https://gophercises.com", "The websiteh that we gonnna  use for site map")
 	flag.Parse()
 
-	pages := get(*urlFlag)
+	maxDepth := flag.Int("depth", 10, "the maximum number of links deep to traverse")
+
+	pages := bfs(*urlFlag, *maxDepth)
 	for _, page := range pages {
 		fmt.Println(page)
 	}
+}
+
+type empty struct{}
+
+func bfs(urlStr string, maxDepth int) []string {
+	seen := make(map[string]empty)
+	var q map[string]empty
+	nq := map[string]empty{
+		urlStr: empty{},
+	}
+
+	// key,value := range someMap{}
+	for i := 0; i <= maxDepth; i++ {
+		q, nq = nq, make(map[string]empty)
+		for url, _ := range q {
+			if _, ok := seen[url]; ok {
+				continue
+			}
+			seen[url] = struct{}{} // adding it to seen map
+			for _, link := range get(url) {
+				nq[link] = empty{}
+			}
+		}
+	}
+	res := make([]string, 0, len(seen))
+	for url, _ := range seen {
+		res = append(res, url)
+	}
+	return res
 }
 
 func get(urlStr string) []string {
