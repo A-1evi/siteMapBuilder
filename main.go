@@ -1,11 +1,13 @@
 package main
 
 import (
+	"encoding/xml"
 	"flag"
 	"fmt"
 	"io"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 
 	link "github.com/A-1evi/htmlLinkParser"
@@ -19,51 +21,71 @@ import (
 5. find all pages(BFS)
 6. print the xml page
 */
-func main() {
-	urlFlag := flag.String("url", "https://gophercises.com", "The websiteh that we gonnna  use for site map")
-	flag.Parse()
+const xmlns = "http://www.sitemaps.org/schemas/sitemap/0.9"
 
-	maxDepth := flag.Int("depth", 10, "the maximum number of links deep to traverse")
-
-	pages := bfs(*urlFlag, *maxDepth)
-	for _, page := range pages {
-		fmt.Println(page)
-	}
+type loc struct {
+	Value string `xml:"loc"`
 }
 
-type empty struct{}
+type urlset struct {
+	Urls  []loc  `xml:"url"`
+	Xmlns string `xml:"xmlns,attr"`
+}
 
-func bfs(urlStr string, maxDepth int) []string {
-	seen := make(map[string]empty)
-	var q map[string]empty
-	nq := map[string]empty{
-		urlStr: empty{},
+func main() {
+	urlFlag := flag.String("url", "https://gophercises.com", "the url that you want to build a sitemap for")
+	maxDepth := flag.Int("depth", 10, "the maximum number of links deep to traverse")
+	flag.Parse()
+
+	pages := bfs(*urlFlag, *maxDepth)
+	toXml := urlset{
+		Xmlns: xmlns,
+	}
+	for _, page := range pages {
+		toXml.Urls = append(toXml.Urls, loc{page})
 	}
 
-	// key,value := range someMap{}
+	fmt.Print(xml.Header)
+	enc := xml.NewEncoder(os.Stdout)
+	enc.Indent("", "  ")
+	if err := enc.Encode(toXml); err != nil {
+		panic(err)
+	}
+	fmt.Println()
+}
+
+func bfs(urlStr string, maxDepth int) []string {
+	seen := make(map[string]struct{})
+	var q map[string]struct{}
+	nq := map[string]struct{}{
+		urlStr: struct{}{},
+	}
 	for i := 0; i <= maxDepth; i++ {
-		q, nq = nq, make(map[string]empty)
+		q, nq = nq, make(map[string]struct{})
+		if len(q) == 0 {
+			break
+		}
 		for url, _ := range q {
 			if _, ok := seen[url]; ok {
 				continue
 			}
-			seen[url] = struct{}{} // adding it to seen map
+			seen[url] = struct{}{}
 			for _, link := range get(url) {
-				nq[link] = empty{}
+				nq[link] = struct{}{}
 			}
 		}
 	}
-	res := make([]string, 0, len(seen))
+	ret := make([]string, 0, len(seen))
 	for url, _ := range seen {
-		res = append(res, url)
+		ret = append(ret, url)
 	}
-	return res
+	return ret
 }
 
 func get(urlStr string) []string {
 	resp, err := http.Get(urlStr)
 	if err != nil {
-		panic(err)
+		return []string{}
 	}
 	defer resp.Body.Close()
 	reqUrl := resp.Request.URL
@@ -72,7 +94,7 @@ func get(urlStr string) []string {
 		Host:   reqUrl.Host,
 	}
 	base := baseUrl.String()
-	return filterLinks(hrefs(resp.Body, base), hasPrefix(base))
+	return filter(hrefs(resp.Body, base), withPrefix(base))
 }
 
 func hrefs(r io.Reader, base string) []string {
@@ -82,7 +104,6 @@ func hrefs(r io.Reader, base string) []string {
 		switch {
 		case strings.HasPrefix(l.Href, "/"):
 			ret = append(ret, base+l.Href)
-
 		case strings.HasPrefix(l.Href, "http"):
 			ret = append(ret, l.Href)
 		}
@@ -90,18 +111,17 @@ func hrefs(r io.Reader, base string) []string {
 	return ret
 }
 
-func filterLinks(links []string, keepFn func(string) bool) []string {
+func filter(links []string, keepFn func(string) bool) []string {
 	var ret []string
-	for _, l := range links {
-		if keepFn(l) {
-			ret = append(ret, l)
+	for _, link := range links {
+		if keepFn(link) {
+			ret = append(ret, link)
 		}
-
 	}
 	return ret
 }
 
-func hasPrefix(pfx string) func(string) bool {
+func withPrefix(pfx string) func(string) bool {
 	return func(link string) bool {
 		return strings.HasPrefix(link, pfx)
 	}
