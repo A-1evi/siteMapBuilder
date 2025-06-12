@@ -1,0 +1,6 @@
+github.com/A-1evi/htmlLinkParser v0.0.0-20250611112529-35c8f928d4ac h1:W86zLWcy2VEJSGk6e6y6Q2tGHCwwYYiG7IwH5kR89no=
+github.com/A-1evi/htmlLinkParser v0.0.0-20250611112529-35c8f928d4ac/go.mod h1:goAmvszmHWvXkA/S0Z/dR1ROOnEGpFkY2QBLPNn719M=
+github.com/A-1evi/htmlLinkParser v0.1.1 h1:5ASOfLBxpTTzGWJ2pNpNs7kk5R7WGkZQINmWNexXxUY=
+github.com/A-1evi/htmlLinkParser v0.1.1/go.mod h1:SjTlFtZpo9D1TazXe7BXTWEqUq27gwrL3w5DTB+oKCU=
+golang.org/x/net v0.41.0 h1:vBTly1HeNPEn3wtREYfy4GZ/NECgw2Cnl+nK6Nz3uvw=
+golang.org/x/net v0.41.0/go.mod h1:B/K4NNqkfmg07DQYrbwvSluqCJOOXwUjeb/5lOisjbA=
